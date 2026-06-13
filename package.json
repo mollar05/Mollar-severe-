@@ -1,7 +1,7 @@
 {
   "name": "teachable-text-ai-server",
-  "version": "2.0.0",
-  "description": "Teachable Text AI 예측 API 서버 (경량 - 임베딩은 클라이언트에서 계산)",
+  "version": "2.1.0",
+  "description": "Teachable Text AI 예측 API 서버 (경량 - 순수 JS tfjs, 임베딩은 클라이언트에서 계산)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,7 +10,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@tensorflow/tfjs-node": "^4.17.0",
+    "@tensorflow/tfjs": "^4.17.0",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   }
