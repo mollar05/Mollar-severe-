@@ -1,7 +1,7 @@
 {
   "name": "teachable-text-ai-server",
-  "version": "1.0.0",
-  "description": "Teachable Text AI 예측 API 서버 (model.json + weights.bin 기반)",
+  "version": "2.0.0",
+  "description": "Teachable Text AI 예측 API 서버 (경량 - 임베딩은 클라이언트에서 계산)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.17.0",
-    "@xenova/transformers": "^2.17.2",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   }
