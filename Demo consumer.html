@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeachableTextAI — 다른 사이트에서 사용하기</title>
+
+<!-- ① TF.js (필수 — TeachableTextAI 전에 로드) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+
+<!-- ② TeachableTextAI 런타임 라이브러리 -->
+<!-- 실제 배포 시: 자신의 서버 경로로 변경하세요 -->
+<script src="teachable-text-ai.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#080c10; --surface:#0d1219; --surface2:#111820; --border:#1e2d3d;
+  --accent:#00e5ff; --accent2:#7c3aed; --accent3:#10b981;
+  --text:#e2eaf3; --muted:#556678; --danger:#f43f5e; --warn:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+header{position:relative;z-index:10;padding:20px 32px;background:rgba(13,18,25,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);display:flex;align-items:center;gap:14px;}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+header h1{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);}
+header p{font-size:12px;color:var(--muted);margin-top:2px;}
+
+.wrap{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:32px 20px;display:flex;flex-direction:column;gap:20px;}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.ph{padding:13px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.ph .dot{width:8px;height:8px;border-radius:50%;}
+.pb{padding:22px;}
+
+/* 코드 블록 */
+.code{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;font-family:'Space Mono',monospace;font-size:12px;line-height:1.9;overflow-x:auto;white-space:pre;color:#94a3b8;margin-bottom:12px;}
+.code .kw{color:#7dd3fc;} .code .fn{color:#a78bfa;} .code .str{color:#86efac;} .code .cm{color:#475569;} .code .nu{color:#fbbf24;}
+
+/* 파일 로더 영역 */
+.file-zone{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+@media(max-width:520px){.file-zone{grid-template-columns:1fr;}}
+.file-slot{display:flex;flex-direction:column;gap:6px;}
+.file-slot label.title{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+.drop-label{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:1.5px dashed var(--border);border-radius:10px;cursor:pointer;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);transition:all .2s;text-transform:uppercase;letter-spacing:.05em;}
+.drop-label:hover{border-color:var(--warn);color:var(--warn);background:rgba(245,158,11,.04);}
+.drop-label.selected{border-color:var(--accent3);color:var(--accent3);background:rgba(16,185,129,.05);}
+.file-name{font-size:11px;color:var(--accent3);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px;}
+
+/* 또는 URL 입력 */
+.or-divider{display:flex;align-items:center;gap:10px;margin:14px 0;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.url-zone{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.url-field{display:flex;flex-direction:column;gap:4px;}
+.url-field label{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+.url-field input{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-family:'Space Mono',monospace;font-size:12px;outline:none;transition:border-color .2s;}
+.url-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.08);}
+
+/* 버튼 */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 20px;border:none;border-radius:8px;cursor:pointer;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .2s;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary{background:linear-gradient(135deg,var(--accent2),#5b21b6);color:#fff;}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,.4);}
+.btn-accent{background:linear-gradient(135deg,var(--accent),#0891b2);color:#000;}
+.btn-accent:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,229,255,.3);}
+
+/* 진행바 */
+.prog-wrap{display:none;flex-direction:column;gap:6px;margin-top:12px;}
+.prog-wrap.show{display:flex;}
+.prog-bar{height:4px;background:var(--border);border-radius:99px;overflow:hidden;}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:99px;transition:width .35s ease;}
+.prog-msg{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+
+/* 상태 뱃지 */
+.badge{display:inline-flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:10px;padding:3px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.06em;}
+.b-idle{background:rgba(85,102,120,.2);color:var(--muted);border:1px solid var(--border);}
+.b-loading{background:rgba(0,229,255,.1);color:var(--accent);border:1px solid rgba(0,229,255,.3);}
+.b-ready{background:rgba(16,185,129,.15);color:var(--accent3);border:1px solid rgba(16,185,129,.3);}
+.b-error{background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.3);}
+.pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 예측 영역 */
+.predict-row{display:flex;gap:10px;}
+.predict-row input{flex:1;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:'Noto Sans KR',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.predict-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.08);}
+.result-box{margin-top:18px;display:none;}
+.result-box.show{display:block;}
+.best-label{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:8px;font-family:'Space Mono',monospace;font-size:14px;color:var(--accent);margin-bottom:14px;}
+.bar-list{display:flex;flex-direction:column;gap:10px;}
+.bar-item{display:flex;flex-direction:column;gap:5px;}
+.bar-label-row{display:flex;justify-content:space-between;font-size:12px;font-family:'Space Mono',monospace;}
+.bar-bg{height:5px;background:var(--border);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+
+/* 코드 예시 탭 */
+.tab-bar{display:flex;gap:2px;margin-bottom:14px;}
+.tab{padding:7px 14px;border-radius:6px 6px 0 0;font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;color:var(--muted);border:1px solid transparent;transition:all .15s;}
+.tab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg);}
+.tab-panel{display:none;} .tab-panel.active{display:block;}
+
+.tip{display:flex;gap:10px;padding:12px 14px;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px;}
+.tip .ico{flex-shrink:0;font-size:16px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🔌</div>
+  <div>
+    <h1>TeachableTextAI — 외부 사용 데모</h1>
+    <p>다른 사이트에서 학습된 모델을 불러와 바로 예측하는 예시입니다</p>
+  </div>
+  <div style="margin-left:auto" id="statusBadge">
+    <span class="badge b-idle"><span class="pulse"></span>대기 중</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ── STEP 1: 모델 불러오기 ── -->
+  <div class="panel">
+    <div class="ph">
+      <div class="dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></div>
+      STEP 1 — 학습된 모델 불러오기
+    </div>
+    <div class="pb">
+
+      <!-- 파일로 불러오기 -->
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">📁 파일로 불러오기</div>
+      <div class="file-zone">
+        <div class="file-slot">
+          <label class="title">model.json</label>
+          <label class="drop-label" for="jsonInput" id="jsonLabel">📄 model.json 선택</label>
+          <input type="file" id="jsonInput" accept=".json" style="display:none" onchange="onJsonSelect(this)">
+          <div class="file-name" id="jsonName"></div>
+        </div>
+        <div class="file-slot">
+          <label class="title">weights.bin</label>
+          <label class="drop-label" for="binInput" id="binLabel">📦 weights.bin 선택</label>
+          <input type="file" id="binInput" accept=".bin" style="display:none" onchange="onBinSelect(this)">
+          <div class="file-name" id="binName"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="loadFilesBtn" onclick="loadFromFiles()" disabled>▶ 파일로 모델 불러오기</button>
+
+      <div class="or-divider">또는 URL로 불러오기</div>
+
+      <!-- URL로 불러오기 -->
+      <div class="url-zone">
+        <div class="url-field">
+          <label>model.json URL</label>
+          <input id="jsonUrl" type="text" placeholder="https://your-server.com/model/model.json" value="">
+        </div>
+        <div class="url-field">
+          <label>weights.bin URL</label>
+          <input id="binUrl" type="text" placeholder="https://your-server.com/model/weights.bin" value="">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadFromUrl()">▶ URL로 모델 불러오기</button>
+
+      <!-- 진행 표시 -->
+      <div class="prog-wrap" id="progWrap">
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-msg" id="progMsg">준비 중...</div>
+      </div>
+
+      <div class="tip" style="margin-top:16px">
+        <div class="ico">💡</div>
+        <div>
+          <strong style="color:var(--text)">어디서 파일을 구하나요?</strong><br>
+          원래 <strong style="color:var(--text)">Teachable Text AI</strong> 페이지에서 학습을 완료하고 <strong style="color:var(--text)">모델 저장 &amp; 불러오기 → ⬇ model.json + weights.bin</strong> 버튼으로 내보내면 됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: 예측 ── -->
+  <div class="panel">
+    <div class="ph">
+      <div class="dot" style="background:var(--accent2);box-shadow:0 0 8px var(--accent2)"></div>
+      STEP 2 — 텍스트 예측
+    </div>
+    <div class="pb">
+      <div class="predict-row">
+        <input id="predictInput" placeholder="분류할 문장을 입력하세요..." disabled
+          onkeydown="if(event.key==='Enter') runPredict()">
+        <button class="btn btn-accent" id="predictBtn" onclick="runPredict()" disabled>분석</button>
+      </div>
+      <div class="result-box" id="resultBox">
+        <div class="best-label" id="bestLabel"></div>
+        <div class="bar-list" id="barList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 코드 예시 ── -->
+  <div class="panel">
+    <div class="ph">
+      <div class="dot" style="background:#7dd3fc;box-shadow:0 0 8px #7dd3fc"></div>
+      내 사이트에 붙이는 방법
+    </div>
+    <div class="pb">
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab(this,'tabUrl')">URL 방식</div>
+        <div class="tab" onclick="switchTab(this,'tabFile')">파일 업로드 방식</div>
+        <div class="tab" onclick="switchTab(this,'tabMinimal')">최소 예시</div>
+      </div>
+
+      <!-- URL 방식 -->
+      <div class="tab-panel active" id="tabUrl"><div class="code"><span class="cm">&lt;!-- 1) TF.js --&gt;</span>
+&lt;<span class="kw">script</span> src=<span class="str">"https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"</span>&gt;&lt;/script&gt;
+
+<span class="cm">&lt;!-- 2) TeachableTextAI 라이브러리 --&gt;</span>
+&lt;<span class="kw">script</span> src=<span class="str">"teachable-text-ai.js"</span>&gt;&lt;/script&gt;
+
+&lt;<span class="kw">script</span>&gt;
+<span class="cm">// 3) 모델 URL로 로드 (서버에 올린 경우)</span>
+<span class="kw">await</span> TeachableTextAI.<span class="fn">load</span>(
+  <span class="str">'https://your-server.com/model/model.json'</span>,
+  <span class="str">'https://your-server.com/model/weights.bin'</span>,
+  {
+    onProgress: (pct, msg) =&gt; console.<span class="fn">log</span>(pct + <span class="str">'% '</span> + msg)
+  }
+);
+
+<span class="cm">// 4) 예측</span>
+<span class="kw">const</span> result = <span class="kw">await</span> TeachableTextAI.<span class="fn">predict</span>(<span class="str">"안녕하세요"</span>);
+console.<span class="fn">log</span>(result.<span class="nu">label</span>);       <span class="cm">// "인사"</span>
+console.<span class="fn">log</span>(result.<span class="nu">confidence</span>);  <span class="cm">// 0.97</span>
+console.<span class="fn">log</span>(result.<span class="nu">scores</span>);      <span class="cm">// { 인사: 0.97, 음식: 0.03 }</span>
+&lt;/<span class="kw">script</span>&gt;</div></div>
+
+      <!-- 파일 방식 -->
+      <div class="tab-panel" id="tabFile"><div class="code"><span class="cm">&lt;!-- HTML --&gt;</span>
+&lt;<span class="kw">input</span> type=<span class="str">"file"</span> id=<span class="str">"jsonFile"</span> accept=<span class="str">".json"</span>&gt;
+&lt;<span class="kw">input</span> type=<span class="str">"file"</span> id=<span class="str">"binFile"</span>  accept=<span class="str">".bin"</span>&gt;
+&lt;<span class="kw">button</span> onclick=<span class="str">"load()"</span>&gt;모델 불러오기&lt;/<span class="kw">button</span>&gt;
+
+<span class="cm">&lt;!-- JS --&gt;</span>
+<span class="kw">async function</span> <span class="fn">load</span>() {
+  <span class="kw">const</span> jsonFile = document.<span class="fn">getElementById</span>(<span class="str">'jsonFile'</span>).files[<span class="nu">0</span>];
+  <span class="kw">const</span> binFile  = document.<span class="fn">getElementById</span>(<span class="str">'binFile'</span>).files[<span class="nu">0</span>];
+
+  <span class="kw">await</span> TeachableTextAI.<span class="fn">loadFromFiles</span>(jsonFile, binFile, {
+    onProgress: (pct, msg) =&gt; console.<span class="fn">log</span>(pct + <span class="str">'%'</span>, msg)
+  });
+
+  <span class="kw">const</span> result = <span class="kw">await</span> TeachableTextAI.<span class="fn">predict</span>(<span class="str">"치킨 먹자"</span>);
+  console.<span class="fn">log</span>(result); <span class="cm">// { label: "음식", confidence: 0.99, scores: {...} }</span>
+}</div></div>
+
+      <!-- 최소 예시 -->
+      <div class="tab-panel" id="tabMinimal"><div class="code"><span class="cm">// onReady 콜백 패턴 — 로드 완료 시 자동 실행</span>
+TeachableTextAI.<span class="fn">onReady</span>(({ labels }) =&gt; {
+  console.<span class="fn">log</span>(<span class="str">'사용 가능한 클래스:'</span>, labels);
+});
+
+<span class="cm">// isReady() 로 즉시 확인 후 사용</span>
+<span class="kw">if</span> (TeachableTextAI.<span class="fn">isReady</span>()) {
+  <span class="kw">const</span> { label, confidence } = <span class="kw">await</span> TeachableTextAI.<span class="fn">predict</span>(userInput);
+  showResult(label, confidence);
+}
+
+<span class="cm">// getLabels() — 클래스 목록 가져오기</span>
+<span class="kw">const</span> classes = TeachableTextAI.<span class="fn">getLabels</span>(); <span class="cm">// ["인사", "음식", ...]</span>
+
+<span class="cm">// unload() — 메모리 해제</span>
+TeachableTextAI.<span class="fn">unload</span>();</div></div>
+
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── 파일 선택 핸들러 ──────────────────────────────────────────────
+let _jsonFile = null, _binFile = null;
+
+function onJsonSelect(input) {
+  _jsonFile = input.files[0] || null;
+  const lbl = document.getElementById('jsonLabel');
+  const nm  = document.getElementById('jsonName');
+  if (_jsonFile) {
+    lbl.textContent = '✓ ' + _jsonFile.name;
+    lbl.classList.add('selected');
+    nm.textContent = _jsonFile.name;
+  }
+  checkFilesReady();
+}
+
+function onBinSelect(input) {
+  _binFile = input.files[0] || null;
+  const lbl = document.getElementById('binLabel');
+  const nm  = document.getElementById('binName');
+  if (_binFile) {
+    lbl.textContent = '✓ ' + _binFile.name;
+    lbl.classList.add('selected');
+    nm.textContent = _binFile.name;
+  }
+  checkFilesReady();
+}
+
+function checkFilesReady() {
+  document.getElementById('loadFilesBtn').disabled = !(_jsonFile && _binFile);
+}
+
+// ── 공통 진행 표시 ─────────────────────────────────────────────────
+function showProgress(pct, msg) {
+  const wrap = document.getElementById('progWrap');
+  wrap.classList.add('show');
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progMsg').textContent = msg;
+}
+
+function setStatus(type, text) {
+  const map = { idle:'b-idle', loading:'b-loading', ready:'b-ready', error:'b-error' };
+  document.getElementById('statusBadge').innerHTML =
+    `<span class="badge ${map[type]||'b-idle'}"><span class="pulse"></span>${text}</span>`;
+}
+
+function onLoadSuccess(labels) {
+  setStatus('ready', `준비됨 · ${labels.length}개 클래스`);
+  showProgress(100, `✓ 로드 완료 — 클래스: ${labels.join(', ')}`);
+  document.getElementById('predictInput').disabled = false;
+  document.getElementById('predictBtn').disabled = false;
+  document.getElementById('predictInput').placeholder =
+    `분류할 문장을 입력하세요... (${labels.join(' / ')})`;
+}
+
+// ── 파일로 로드 ────────────────────────────────────────────────────
+async function loadFromFiles() {
+  if (!_jsonFile || !_binFile) return;
+  setStatus('loading', '로드 중...');
+  showProgress(0, '준비 중...');
+  try {
+    const { labels } = await TeachableTextAI.loadFromFiles(_jsonFile, _binFile, {
+      onProgress: showProgress
+    });
+    onLoadSuccess(labels);
+  } catch (e) {
+    setStatus('error', '로드 실패');
+    showProgress(0, '❌ ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── URL로 로드 ─────────────────────────────────────────────────────
+async function loadFromUrl() {
+  const jsonUrl = document.getElementById('jsonUrl').value.trim();
+  const binUrl  = document.getElementById('binUrl').value.trim();
+  if (!jsonUrl || !binUrl) {
+    alert('model.json URL과 weights.bin URL을 모두 입력하세요.');
+    return;
+  }
+  setStatus('loading', '로드 중...');
+  showProgress(0, '준비 중...');
+  try {
+    const { labels } = await TeachableTextAI.load(jsonUrl, binUrl, {
+      onProgress: showProgress
+    });
+    onLoadSuccess(labels);
+  } catch (e) {
+    setStatus('error', '로드 실패');
+    showProgress(0, '❌ ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── 예측 ───────────────────────────────────────────────────────────
+const BAR_COLORS = ['#00e5ff','#7c3aed','#10b981','#f59e0b','#f43f5e','#3b82f6','#ec4899','#84cc16'];
+
+async function runPredict() {
+  const text = document.getElementById('predictInput').value.trim();
+  if (!text) return;
+  if (!TeachableTextAI.isReady()) return;
+
+  document.getElementById('predictBtn').disabled = true;
+  try {
+    const result = await TeachableTextAI.predict(text);
+
+    document.getElementById('bestLabel').textContent = `✦ ${result.label}  (${(result.confidence * 100).toFixed(1)}%)`;
+
+    const sortedScores = Object.entries(result.scores)
+      .sort((a, b) => b[1] - a[1]);
+
+    document.getElementById('barList').innerHTML = sortedScores.map(([lbl, pct], i) => `
+      <div class="bar-item">
+        <div class="bar-label-row">
+          <span style="color:${BAR_COLORS[i % BAR_COLORS.length]}">${lbl}</span>
+          <span style="color:var(--warn)">${(pct * 100).toFixed(1)}%</span>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:${pct * 100}%;background:${BAR_COLORS[i % BAR_COLORS.length]}"></div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('resultBox').classList.add('show');
+  } catch (e) {
+    console.error(e);
+  } finally {
+    document.getElementById('predictBtn').disabled = false;
+  }
+}
+
+// ── 탭 전환 ─────────────────────────────────────────────────────────
+function switchTab(el, panelId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+</script>
+</body>
+</html>
