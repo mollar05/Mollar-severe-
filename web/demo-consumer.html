@@ -122,6 +122,38 @@ header p{font-size:12px;color:var(--muted);margin-top:2px;}
 
 <div class="wrap">
 
+  <!-- ── API 모드: 서버에 등록된 모델 사용 ── -->
+  <div class="panel">
+    <div class="ph">
+      <div class="dot" style="background:var(--accent3);box-shadow:0 0 8px var(--accent3)"></div>
+      🌐 API 모드 — 서버에 등록된 모델로 예측 (파일 불필요)
+    </div>
+    <div class="pb">
+      <div class="url-zone">
+        <div class="url-field">
+          <label>서버 주소 (예: https://your-app.onrender.com)</label>
+          <input id="apiServerUrl" type="text" placeholder="https://your-app.onrender.com">
+        </div>
+      </div>
+      <div class="predict-row">
+        <input id="apiPredictInput" placeholder="분류할 문장을 입력하세요..." onkeydown="if(event.key==='Enter') runApiPredict()">
+        <button class="btn btn-accent" id="apiPredictBtn" onclick="runApiPredict()">분석</button>
+      </div>
+      <div class="result-box" id="apiResultBox">
+        <div class="best-label" id="apiBestLabel"></div>
+        <div class="bar-list" id="apiBarList"></div>
+      </div>
+      <div class="tip" style="margin-top:14px">
+        <div class="ico">💡</div>
+        <div>
+          학습 페이지(<code>index.html</code>)에서 <strong style="color:var(--text)">"🚀 서버로 전송"</strong>을 눌러
+          모델을 서버에 등록한 뒤, 위 칸에 서버 주소만 입력하면 model.json/weights.bin 파일 없이 바로 예측할 수 있습니다.
+          (브라우저에서 임베딩만 계산해 서버로 전송)
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── STEP 1: 모델 불러오기 ── -->
   <div class="panel">
     <div class="ph">
@@ -276,6 +308,71 @@ TeachableTextAI.<span class="fn">unload</span>();</div></div>
   </div>
 
 </div><!-- /wrap -->
+
+<script type="module">
+// ── API 모드: 브라우저에서 임베딩 계산 후 서버 /predict 호출 ────────────
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+let _apiExtractor = null;
+async function getApiExtractor() {
+  if (_apiExtractor) return _apiExtractor;
+  _apiExtractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small');
+  return _apiExtractor;
+}
+
+const API_BAR_COLORS = ['#00e5ff','#7c3aed','#10b981','#f59e0b','#f43f5e','#3b82f6','#ec4899','#84cc16'];
+
+window.runApiPredict = async function () {
+  const serverUrl = document.getElementById('apiServerUrl').value.trim().replace(/\/$/, '');
+  const text = document.getElementById('apiPredictInput').value.trim();
+  const btn = document.getElementById('apiPredictBtn');
+
+  if (!serverUrl) { alert('서버 주소를 입력하세요.'); return; }
+  if (!text) return;
+
+  btn.disabled = true;
+  btn.textContent = '분석 중...';
+
+  try {
+    const extractor = await getApiExtractor();
+    const out = await extractor([`query: ${text}`], { pooling: 'mean', normalize: true });
+    const embedding = Array.from(out.data);
+
+    const res = await fetch(`${serverUrl}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embedding })
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+
+    document.getElementById('apiBestLabel').textContent =
+      `✦ ${result.label}  (${(result.confidence * 100).toFixed(1)}%)`;
+
+    const sorted = Object.entries(result.scores).sort((a, b) => b[1] - a[1]);
+    document.getElementById('apiBarList').innerHTML = sorted.map(([lbl, pct], i) => `
+      <div class="bar-item">
+        <div class="bar-label-row">
+          <span style="color:${API_BAR_COLORS[i % API_BAR_COLORS.length]}">${lbl}</span>
+          <span style="color:var(--warn)">${(pct * 100).toFixed(1)}%</span>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:${pct * 100}%;background:${API_BAR_COLORS[i % API_BAR_COLORS.length]}"></div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('apiResultBox').classList.add('show');
+  } catch (e) {
+    alert('예측 실패: ' + e.message);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '분석';
+  }
+};
+</script>
 
 <script>
 // ── 파일 선택 핸들러 ──────────────────────────────────────────────
